@@ -1,0 +1,5 @@
+npm install
+npm i axios jwt-decode react-router-dom zustand react-hook-form
+npm i -D tailwindcss postcss autoprefixer @types/jwt-decode
+==========================================
+npm run dev
