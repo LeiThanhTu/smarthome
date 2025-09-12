@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 
 import DeviceCard from "../../components/DeviceCard";
-import { useAuth } from "../../store/auth.store";
+import { useAuth } from "../../hooks/useAuth";
 import Modal, { ModalFooter } from "../../components/Modal";
 import { Button } from "../../components/Button";
 import type { Device, DeviceType } from "../../types";
@@ -54,32 +54,32 @@ export default function Devices() {
       let data = await devicesApi.getAll();
       if (!Array.isArray(data) || data.length === 0) {
         // Mock data if API returns empty
-        data = [
-          {
-            id: "1",
-            name: "Living Room Light",
-            type: "light",
-            roomId: "1",
-            status: true,
-            description: "Ceiling light",
-          },
-          {
-            id: "2",
-            name: "Kitchen AC",
-            type: "ac",
-            roomId: "2",
-            status: false,
-            description: "Air conditioner",
-          },
-          {
-            id: "3",
-            name: "Bedroom TV",
-            type: "tv",
-            roomId: "3",
-            status: true,
-            description: "Smart TV",
-          },
-        ];
+        // data = [
+        //   {
+        //     id: "1",
+        //     name: "Living Room Light",
+        //     type: "light",
+        //     roomId: "1",
+        //     status: true,
+        //     description: "Ceiling light",
+        //   },
+        //   {
+        //     id: "2",
+        //     name: "Kitchen AC",
+        //     type: "ac",
+        //     roomId: "2",
+        //     status: false,
+        //     description: "Air conditioner",
+        //   },
+        //   {
+        //     id: "3",
+        //     name: "Bedroom TV",
+        //     type: "tv",
+        //     roomId: "3",
+        //     status: true,
+        //     description: "Smart TV",
+        //   },
+        // ];
       }
       return data;
     },
@@ -250,9 +250,9 @@ export default function Devices() {
           {filteredDevices.map((device) => {
             // Quy tắc: ADMIN, ADULT điều khiển mọi thiết bị; CHILD chỉ điều khiển thiết bị cho phép
             let canControl = false;
-            if (isAdmin || isAdult) {
+            if (isAdmin() || isAdult()) {
               canControl = true;
-            } else if (isChild) {
+            } else if (isChild()) {
               // Ví dụ: chỉ cho phép CHILD điều khiển thiết bị type 'light' và 'tv'
               const allowedTypes = ["light", "tv"];
               canControl = allowedTypes.includes(device.type);

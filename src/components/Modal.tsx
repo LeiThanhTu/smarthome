@@ -5,10 +5,11 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  description?: string;
   children: React.ReactNode;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, description, children }) => {
   // Close modal when pressing escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -56,6 +57,9 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
                 <XMarkIcon className="h-6 w-6" aria-hidden="true" />
               </button>
             </div>
+            {description && (
+              <p className="mt-2 text-sm text-gray-500">{description}</p>
+            )}
             <div className="mt-4">{children}</div>
           </div>
         </div>
