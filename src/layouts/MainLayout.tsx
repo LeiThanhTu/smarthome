@@ -36,7 +36,11 @@ export default function MainLayout() {
   };
 
   if (!user) {
-    return null; // Or a loading spinner
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
   }
 
   const filteredNavigation = navigation.filter((item) =>
@@ -79,7 +83,7 @@ export default function MainLayout() {
                       <Menu.Button className="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                         <span className="sr-only">Open user menu</span>
                         <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
-                          {user.name.charAt(0).toUpperCase()}
+                          {user.fullName.charAt(0).toUpperCase()}
                         </div>
                       </Menu.Button>
                     </div>
@@ -158,12 +162,12 @@ export default function MainLayout() {
                 <div className="flex items-center px-4">
                   <div className="flex-shrink-0">
                     <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
-                      {user.name.charAt(0).toUpperCase()}
+                      {user.fullName.charAt(0).toUpperCase()}
                     </div>
                   </div>
                   <div className="ml-3">
                     <div className="text-base font-medium text-gray-800">
-                      {user.name}
+                      {user.fullName}
                     </div>
                     <div className="text-sm font-medium text-gray-500">
                       {user.email}

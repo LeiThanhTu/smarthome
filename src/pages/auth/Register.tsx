@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import type { Role } from "../../types";
 
 interface RegisterFormData {
-  name: string;
+  fullName: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -41,16 +41,14 @@ export default function Register() {
 
     try {
       setIsLoading(true);
-      const { user, token } = await authApi.register({
-        name: data.name,
+      const { user } = await authApi.register({
+        fullName: data.fullName,
         email: data.email,
         password: data.password,
         role: data.role,
       });
-
-      login(token);
       toast.success("Registration successful!");
-      navigate("/dashboard");
+      navigate("/login");
     } catch (error: any) {
       toast.error(error.message || "Registration failed. Please try again.");
     } finally {
@@ -78,27 +76,27 @@ export default function Register() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label htmlFor="name" className="sr-only">
+              <label htmlFor="fullName" className="sr-only">
                 Full Name
               </label>
               <input
-                id="name"
+                id="fullName"
                 type="text"
                 className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${
-                  errors.name ? "border-red-300" : "border-gray-300"
+                  errors.fullName ? "border-red-300" : "border-gray-300"
                 } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
                 placeholder="Full Name"
-                {...register("name", {
-                  required: "Name is required",
+                {...register("fullName", {
+                  required: "Full Name is required",
                   minLength: {
                     value: 2,
-                    message: "Name must be at least 2 characters",
+                    message: "Full Name must be at least 2 characters",
                   },
                 })}
               />
-              {errors.name && (
+              {errors.fullName && (
                 <p className="mt-1 text-sm text-red-600">
-                  {errors.name.message}
+                  {errors.fullName.message}
                 </p>
               )}
             </div>

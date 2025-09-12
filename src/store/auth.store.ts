@@ -1,13 +1,12 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { jwtDecode } from 'jwt-decode';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
-type UserRole = 'ADMIN' | 'ADULT' | 'CHILD';
+type UserRole = "ADMIN" | "ADULT" | "CHILD";
 
 interface User {
   id: string;
   email: string;
-  name: string;
+  fullName: string;
   role: UserRole;
 }
 
@@ -17,107 +16,92 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  hasHydrated: boolean;
+  login: (data: { user: User; token: string }) => void;
   mockLogin: (role?: UserRole) => void;
   logout: () => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
+  setHasHydrated: (state: boolean) => void;
+  initialize: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
-      token: 'mock-jwt-token',
-      user: {
-        id: '1',
-        email: 'admin@example.com',
-        name: 'Admin User',
-        role: 'ADMIN' as UserRole,
-      },
-      isAuthenticated: true,
+    (set, get) => ({
+      token: null,
+      user: null,
+      isAuthenticated: false,
       isLoading: false,
       error: null,
-      
-      login: async (email: string, password: string) => {
-        set({ isLoading: true, error: null });
-        try {
-          // This is a mock implementation
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // For demo purposes, accept any non-empty password
-          if (!email || !password) {
-            throw new Error('Email and password are required');
-          }
-          
-          const mockToken = `mock-jwt-token-${Date.now()}`;
-          set({
-            token: mockToken,
-            user: {
-              id: '1',
-              email,
-              name: email.split('@')[0],
-              role: email.includes('admin') ? 'ADMIN' : 'ADULT',
-            },
-            isAuthenticated: true,
-          });
-        } catch (error) {
-          console.error('Login failed:', error);
-          set({ error: error instanceof Error ? error.message : 'Login failed' });
-          throw error;
-        } finally {
-          set({ isLoading: false });
-        }
+      hasHydrated: false,
+
+      login: ({ user, token }) => {
+        set({
+          token,
+          user,
+          isAuthenticated: true,
+          error: null,
+          isLoading: false,
+        });
       },
-      
-      mockLogin: (role: UserRole = 'ADMIN') => {
+
+      mockLogin: (role: UserRole = "ADMIN") => {
         const mockUser = {
-          id: '1',
+          id: `${Date.now()}`,
           email: `${role.toLowerCase()}@example.com`,
-          name: `${role} User`,
+          fullName: `${role} User`,
           role,
         };
-        
+        const mockToken = `mock-token-${Date.now()}`;
         set({
-          token: `mock-jwt-token-${Date.now()}`,
+          token: mockToken,
           user: mockUser,
           isAuthenticated: true,
           error: null,
+          isLoading: false,
         });
+        return { user: mockUser, token: mockToken };
       },
-      
+
       logout: () => {
-        set({
-          token: null,
-          user: null,
+        set({ 
+          token: null, 
+          user: null, 
           isAuthenticated: false,
+          isLoading: false,
+          error: null
         });
+        localStorage.removeItem("auth-storage");
       },
-      
+
       setLoading: (isLoading: boolean) => set({ isLoading }),
       setError: (error: string | null) => set({ error }),
+      setHasHydrated: (state: boolean) => set({ hasHydrated: state }),
+      
+      initialize: async () => {
+        // This function will be called after hydration
+        set({ hasHydrated: true });
+      },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.initialize();
+        }
+      },
     }
   )
 );
 
-// Export auth hook for easier access
-export const useAuth = () => {
-  const { user, isAuthenticated, isLoading, error } = useAuthStore();
-  
-  return {
-    user,
-    isAuthenticated,
-    isLoading,
-    error,
-    isAdmin: user?.role === 'ADMIN',
-    isAdult: user?.role === 'ADULT',
-    isChild: user?.role === 'CHILD',
-  };
-};
+// Export helper functions
+export const isAdmin = (user: User | null) => user?.role === "ADMIN";
+export const isAdult = (user: User | null) => user?.role === "ADULT";
+export const isChild = (user: User | null) => user?.role === "CHILD";
