@@ -2,6 +2,24 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth.store";
 import { Link } from "react-router-dom";
 import { BarChart3, Home, Lightbulb, Clock, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSocket } from "../context/SocketContext";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { api } from "../api/http";
+
+// Định nghĩa kiểu dữ liệu cho sensor và device
+interface SensorData {
+  id: string;
+  type: string;
+  value: string;
+  timestamp: string;
+}
+
+interface DeviceStatus {
+  name: string;
+  status: "on" | "off";
+}
 
 // Mock data - replace with actual API calls
 const fetchDashboardData = async () => {
@@ -115,8 +133,120 @@ const ActivityItem = ({
   );
 };
 
+interface DeviceControlCardProps {
+  deviceName: string;
+  status: "on" | "off";
+  onToggle: (command: "on" | "off" | "open" | "close") => void;
+  icon: React.ElementType;
+  allowedRoles?: string[];
+  userRole?: string;
+}
+
+const DeviceControlCard: React.FC<DeviceControlCardProps> = ({
+  deviceName,
+  status,
+  onToggle,
+  icon: Icon,
+  allowedRoles,
+  userRole,
+}) => {
+  const isToggleAllowed = allowedRoles
+    ? userRole && allowedRoles.includes(userRole)
+    : true;
+
+  const handleToggle = () => {
+    if (!isToggleAllowed) {
+      toast.warn("You don't have permission to control this device.");
+      return;
+    }
+    const newCommand = status === "on" || status === "open" ? "off" : "on";
+    onToggle(
+      newCommand === "off"
+        ? deviceName.includes("Cửa")
+          ? "close"
+          : "off"
+        : deviceName.includes("Cửa")
+        ? "open"
+        : "on"
+    );
+  };
+
+  return (
+    <div className="bg-white overflow-hidden shadow rounded-lg p-5 flex items-center justify-between">
+      <div className="flex items-center">
+        <div className="flex-shrink-0 rounded-md bg-indigo-500 p-3">
+          <Icon className="h-6 w-6 text-white" />
+        </div>
+        <div className="ml-5">
+          <h3 className="text-lg font-medium text-gray-900">{deviceName}</h3>
+          <p
+            className={`text-sm ${
+              status === "on" || status === "open"
+                ? "text-green-600"
+                : "text-red-600"
+            }`}
+          >
+            Status: {status === "on" || status === "open" ? "On" : "Off"}
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={handleToggle}
+        className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+          ${
+            status === "on" || status === "open"
+              ? "bg-indigo-600"
+              : "bg-gray-200"
+          }
+          ${!isToggleAllowed && "opacity-50 cursor-not-allowed"}
+        `}
+        disabled={!isToggleAllowed}
+      >
+        <span className="sr-only">Use setting</span>
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200
+            ${
+              status === "on" || status === "open"
+                ? "translate-x-5"
+                : "translate-x-0"
+            }
+          `}
+        />
+      </button>
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const { socket } = useSocket();
+  const [sensorData, setSensorData] = useState<{ [key: string]: SensorData }>(
+    {}
+  );
+  const [deviceStatus, setDeviceStatus] = useState<{
+    [key: string]: DeviceStatus;
+  }>({});
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("sensorData", (data: SensorData) => {
+      console.log("Received sensorData:", data);
+      setSensorData((prev) => ({ ...prev, [data.type]: data }));
+    });
+
+    socket.on("deviceStatus", (data: DeviceStatus) => {
+      console.log("Received deviceStatus:", data);
+      setDeviceStatus((prev) => ({ ...prev, [data.name]: data }));
+    });
+
+    return () => {
+      socket.off("sensorData");
+      socket.off("deviceStatus");
+    };
+  }, [socket]);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: fetchDashboardData,
@@ -157,6 +287,25 @@ export default function Dashboard() {
     );
   }
 
+  const handleDeviceControl = async (
+    deviceType: string,
+    command: "on" | "off" | "open" | "close"
+  ) => {
+    try {
+      const response = await api.post(`/mqtt/control/${deviceType}`, {
+        command,
+      });
+      toast.success(`Device ${deviceType} turned ${command} successfully!`);
+      // Update device status in state
+      setDeviceStatus((prev) => ({
+        ...prev,
+        [deviceType]: { ...prev[deviceType], status: command },
+      }));
+    } catch (error) {
+      toast.error(`Failed to turn ${deviceType} ${command}: ${error.message}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -194,12 +343,82 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Device Controls */}
+      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <DeviceControlCard
+          deviceName="Cửa ra vào"
+          status={deviceStatus["Cửa ra vào"]?.status || "off"}
+          onToggle={(cmd) => handleDeviceControl("door", cmd)}
+          icon={Home}
+          allowedRoles={["ADMIN", "ADULT"]}
+          userRole={user?.role}
+        />
+        <DeviceControlCard
+          deviceName="Cửa gara"
+          status={deviceStatus["Cửa gara"]?.status || "off"}
+          onToggle={(cmd) => handleDeviceControl("garage", cmd)}
+          icon={Home}
+          allowedRoles={["ADMIN", "ADULT"]}
+          userRole={user?.role}
+        />
+        <DeviceControlCard
+          deviceName="Đèn LED"
+          status={deviceStatus["LED"]?.status || "off"}
+          onToggle={(cmd) => handleDeviceControl("led", cmd)}
+          icon={Lightbulb}
+          allowedRoles={["ADMIN", "ADULT", "CHILD"]}
+          userRole={user?.role}
+        />
+        <DeviceControlCard
+          deviceName="Quạt FAN"
+          status={deviceStatus["FAN"]?.status || "off"}
+          onToggle={(cmd) => handleDeviceControl("fan", cmd)}
+          icon={Lightbulb} // Có thể thay bằng icon quạt
+          allowedRoles={["ADMIN", "ADULT"]}
+          userRole={user?.role}
+        />
+        <DeviceControlCard
+          deviceName="Còi báo động"
+          status={deviceStatus["BUZZER"]?.status || "off"}
+          onToggle={(cmd) => handleDeviceControl("buzzer", cmd)}
+          icon={Lightbulb} // Có thể thay bằng icon còi
+          allowedRoles={["ADMIN", "ADULT"]}
+          userRole={user?.role}
+        />
+      </div>
+
+      {/* Sensor Data Display */}
+      <div className="mt-8">
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Sensor Readings
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Real-time data from your smart home sensors.
+            </p>
+          </div>
+          <div className="divide-y divide-gray-200 p-4">
+            {Object.entries(sensorData).map(([type, data]) => (
+              <div key={type} className="flex justify-between py-2">
+                <p className="text-sm font-medium text-gray-700">
+                  {type.toUpperCase()}:
+                </p>
+                <p className="text-sm text-gray-900">
+                  {data.value} {type === "gas" ? "ppm" : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Recent Activity */}
       <div className="mt-8">
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
             <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Recent Activity
+              Recent Activity (Mock Data)
             </h3>
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
               Overview of recent activities in your smart home
