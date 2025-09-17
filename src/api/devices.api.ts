@@ -1,5 +1,6 @@
 import { api } from "./http";
-import type { Device, DeviceCreate, DeviceUpdate } from "../types";
+import type { Device, DeviceCreate, DeviceUpdate } from "../types/device"; // Import từ types/device.ts
+import type { DeviceData } from "../types/home.types";
 
 /**
  * Fetch all devices
@@ -30,20 +31,21 @@ export const create = async (deviceData: DeviceCreate): Promise<Device> => {
  */
 export const update = async (
   id: string,
-  deviceData: Partial<DeviceUpdate>
+  deviceData: Partial<DeviceUpdate> // Sử dụng Partial<DeviceUpdate> để cho phép cập nhật một phần
 ): Promise<Device> => {
-  const response = await api.patch<Device>(`/devices/${id}`, deviceData);
+  const response = await api.put<Device>(`/devices/${id}`, deviceData); // Đã đổi từ patch sang put
   return response.data;
 };
 
 /**
- * Update device status (on/off)
+ * Update device status (on/off, open/close, active/inactive)
+ * (chỉ cập nhật status, không cần nhiều thông tin như update full device)
  */
 export const updateStatus = async (
   id: string,
-  status: boolean
+  status: DeviceData["status"]
 ): Promise<Device> => {
-  const response = await api.patch<Device>(`/devices/${id}/status`, { status });
+  const response = await api.patch<Device>(`/devices/${id}`, { status });
   return response.data;
 };
 
@@ -75,6 +77,20 @@ export const getStats = async (): Promise<{
   return response.data;
 };
 
+/**
+ * Send a device control request
+ */
+export const sendDeviceRequest = async (
+  deviceId: string,
+  requestedStatus: DeviceData["status"]
+): Promise<any> => {
+  const response = await api.post("/devicerequests", {
+    deviceId,
+    requestedStatus,
+  });
+  return response.data;
+};
+
 export const devicesApi = {
   getAll,
   getById,
@@ -84,6 +100,7 @@ export const devicesApi = {
   delete: remove,
   getByRoom,
   getStats,
+  sendDeviceRequest,
 };
 
 export default devicesApi;
