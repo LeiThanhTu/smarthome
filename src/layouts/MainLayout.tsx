@@ -6,13 +6,35 @@ import { useAuthStore } from "../store/auth.store";
 import { authApi } from "../api/auth.api";
 import { toast } from "react-toastify";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace("/api", "")
+  : "http://localhost:3000";
+
+const DEFAULT_AVATAR_URL = `${API_BASE_URL}/uploads/default-avatar.png`;
+
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", roles: ["ADMIN", "ADULT", "CHILD"] },
-  { name: "Rooms", href: "/rooms", roles: ["ADMIN", "ADULT"] },
-  { name: "Devices", href: "/devices", roles: ["ADMIN", "ADULT", "CHILD"] },
-  { name: "Sensors", href: "/sensors", roles: ["ADMIN", "ADULT"] },
-  { name: "Schedules", href: "/schedules", roles: ["ADMIN", "ADULT"] },
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    roles: ["ADMIN", "ADULT", "CHILD", "GUEST"],
+  },
+  {
+    name: "Rooms",
+    href: "/rooms",
+    roles: ["ADMIN", "ADULT", "CHILD", "GUEST"],
+  },
+  {
+    name: "Devices",
+    href: "/devices",
+    roles: ["ADMIN", "ADULT", "CHILD", "GUEST"],
+  },
   { name: "Users", href: "/users", roles: ["ADMIN"] },
+  { name: "Notifications", href: "/notifications", roles: ["ADMIN"] },
+  {
+    name: "My Requests",
+    href: "/my-requests",
+    roles: ["ADULT", "CHILD", "GUEST"],
+  },
 ];
 
 function classNames(...classes: string[]) {
@@ -43,13 +65,16 @@ export default function MainLayout() {
     );
   }
 
-  const filteredNavigation = navigation.filter((item) =>
-    item.roles.includes(user.role)
+  const filteredNavigation = navigation.filter(
+    (item) =>
+      item.roles.includes(user.role as any) &&
+      // Nếu user bị block, ẩn tab Devices
+      !(user.isBlocked && item.href === "/devices")
   );
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Disclosure as="nav" className="bg-white shadow-sm">
+      <Disclosure as="nav" className="sticky top-0 z-50 bg-white shadow-sm">
         {({ open }) => (
           <>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -80,11 +105,20 @@ export default function MainLayout() {
                 <div className="hidden sm:ml-6 sm:flex sm:items-center">
                   <Menu as="div" className="relative ml-3">
                     <div>
-                      <Menu.Button className="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        <span className="sr-only">Open user menu</span>
-                        <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
-                          {user.fullName.charAt(0).toUpperCase()}
-                        </div>
+                      <Menu.Button className="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 lg:rounded-md lg:p-2 lg:hover:bg-gray-50">
+                        <img
+                          className="h-8 w-8 rounded-full object-cover"
+                          src={`${
+                            user.avatar?.startsWith("/uploads")
+                              ? `${API_BASE_URL}${user.avatar}`
+                              : user.avatar || DEFAULT_AVATAR_URL
+                          }?t=${Date.now()}`}
+                          alt="User Avatar"
+                        />
+                        <span className="ml-3 hidden text-sm font-medium text-gray-700 lg:block">
+                          <span className="sr-only">Open user menu for </span>
+                          {user.fullName || user.email}
+                        </span>
                       </Menu.Button>
                     </div>
                     <Transition
@@ -161,9 +195,15 @@ export default function MainLayout() {
               <div className="border-t border-gray-200 pb-3 pt-4">
                 <div className="flex items-center px-4">
                   <div className="flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
-                      {user.fullName.charAt(0).toUpperCase()}
-                    </div>
+                    <img
+                      className="h-10 w-10 rounded-full object-cover"
+                      src={`${
+                        user.avatar?.startsWith("/uploads")
+                          ? `${API_BASE_URL}${user.avatar}`
+                          : user.avatar || DEFAULT_AVATAR_URL
+                      }?t=${Date.now()}`}
+                      alt="User Avatar"
+                    />
                   </div>
                   <div className="ml-3">
                     <div className="text-base font-medium text-gray-800">

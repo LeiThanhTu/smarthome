@@ -1,13 +1,16 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-type UserRole = "ADMIN" | "ADULT" | "CHILD";
+type UserRole = "ADMIN" | "ADULT" | "CHILD" | "GUEST";
 
 interface User {
   id: string;
   email: string;
   fullName: string;
   role: UserRole;
+  avatar?: string;
+  dateOfBirth?: string;
+  isBlocked?: boolean;
 }
 
 interface AuthState {
@@ -24,11 +27,12 @@ interface AuthState {
   setError: (error: string | null) => void;
   setHasHydrated: (state: boolean) => void;
   initialize: () => Promise<void>;
+  updateUser: (userData: Partial<User>) => void; // Thêm hành động cập nhật người dùng
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       token: null,
       user: null,
       isAuthenticated: false,
@@ -52,6 +56,9 @@ export const useAuthStore = create<AuthState>()(
           email: `${role.toLowerCase()}@example.com`,
           fullName: `${role} User`,
           role,
+          avatar: "/uploads/default-avatar.png",
+          dateOfBirth: "2000-01-01",
+          isBlocked: false,
         };
         const mockToken = `mock-token-${Date.now()}`;
         set({
@@ -65,12 +72,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        set({ 
-          token: null, 
-          user: null, 
+        set({
+          token: null,
+          user: null,
           isAuthenticated: false,
           isLoading: false,
-          error: null
+          error: null,
         });
         localStorage.removeItem("auth-storage");
       },
@@ -78,10 +85,17 @@ export const useAuthStore = create<AuthState>()(
       setLoading: (isLoading: boolean) => set({ isLoading }),
       setError: (error: string | null) => set({ error }),
       setHasHydrated: (state: boolean) => set({ hasHydrated: state }),
-      
+
       initialize: async () => {
         // This function will be called after hydration
         set({ hasHydrated: true });
+      },
+
+      // Hành động mới để cập nhật thông tin người dùng
+      updateUser: (userData: Partial<User>) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...userData } : state.user,
+        }));
       },
     }),
     {

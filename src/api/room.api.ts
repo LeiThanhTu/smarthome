@@ -1,44 +1,8 @@
 // src/api/room.api.ts
-import type {
-  Room,
-  RoomCreate,
-  RoomType,
-  RoomUpdate,
-} from "../models/RoomModel";
+import type { Room, RoomCreate, RoomUpdate, RoomType } from "../types/room"; // Import từ types/room.ts mới
+import { api } from "./http";
 
-// Mock data
-let mockRooms: Room[] = [
-  {
-    id: "1",
-    name: "Living Room",
-    type: "LIVING_ROOM",
-    description: "Main living area",
-    floor: 1,
-    deviceCount: 3,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    name: "Master Bedroom",
-    type: "BEDROOM",
-    description: "Main bedroom",
-    floor: 2,
-    deviceCount: 2,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    name: "Kitchen",
-    type: "KITCHEN",
-    description: "Main kitchen area",
-    floor: 1,
-    deviceCount: 4,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+// Đã loại bỏ mock data vì sẽ gọi API backend
 
 export const ROOM_TYPE_OPTIONS = [
   { value: "LIVING_ROOM", label: "Living Room" },
@@ -48,64 +12,54 @@ export const ROOM_TYPE_OPTIONS = [
   { value: "DINING_ROOM", label: "Dining Room" },
   { value: "HOME_OFFICE", label: "Home Office" },
   { value: "GARAGE", label: "Garage" },
+  { value: "GARDEN", label: "Garden" },
+  { value: "DRYING_YARD", label: "Drying Yard" },
+  { value: "TERRACE", label: "Terrace" },
+  { value: "STORAGE", label: "Storage" },
   { value: "OTHER", label: "Other" },
 ] as const;
 
-// Simulate API delay
-const simulateApiDelay = () =>
-  new Promise((resolve) => setTimeout(resolve, 300));
+// Đã loại bỏ simulateApiDelay vì sẽ gọi API backend
 
 export const getAll = async (): Promise<Room[]> => {
-  await simulateApiDelay();
-  return [...mockRooms];
+  const response = await api.get<Room[]>("/rooms");
+  return response.data;
 };
 
 export const getById = async (id: string): Promise<Room> => {
-  await simulateApiDelay();
-  const room = mockRooms.find((room) => room.id === id);
-  if (!room) throw new Error("Room not found");
-  return { ...room };
+  const response = await api.get<Room>(`/rooms/${id}`);
+  return response.data;
 };
 
 export const create = async (roomData: RoomCreate): Promise<Room> => {
-  await simulateApiDelay();
-  const newRoom: Room = {
-    ...roomData,
-    id: Math.random().toString(36).substr(2, 9),
-    deviceCount: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  mockRooms = [...mockRooms, newRoom];
-  return newRoom;
+  const response = await api.post<Room>("/rooms", roomData);
+  return response.data;
 };
 
 export const update = async (
   id: string,
   roomData: Partial<RoomUpdate>
 ): Promise<Room> => {
-  await simulateApiDelay();
-  const index = mockRooms.findIndex((room) => room.id === id);
-  if (index === -1) throw new Error("Room not found");
-
-  const updatedRoom = {
-    ...mockRooms[index],
-    ...roomData,
-    updatedAt: new Date().toISOString(),
-  };
-
-  mockRooms = [
-    ...mockRooms.slice(0, index),
-    updatedRoom,
-    ...mockRooms.slice(index + 1),
-  ];
-
-  return updatedRoom;
+  const response = await api.put<Room>(`/rooms/${id}`, roomData);
+  return response.data;
 };
 
 export const remove = async (id: string): Promise<void> => {
-  await simulateApiDelay();
-  mockRooms = mockRooms.filter((room) => room.id !== id);
+  await api.delete(`/rooms/${id}`);
+};
+
+export const addMembers = async (
+  roomId: string,
+  memberIds: string[]
+): Promise<void> => {
+  await api.post(`/rooms/${roomId}/members`, { memberIds });
+};
+
+export const removeMember = async (
+  roomId: string,
+  userId: string
+): Promise<void> => {
+  await api.delete(`/rooms/${roomId}/members/${userId}`);
 };
 
 const RoomAPI = {
@@ -114,6 +68,8 @@ const RoomAPI = {
   create,
   update,
   delete: remove,
+  addMembers,
+  removeMember,
 };
 
 export { RoomAPI };

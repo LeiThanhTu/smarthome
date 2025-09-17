@@ -3,7 +3,7 @@ import axios from "axios";
 // import type { AxiosRequestConfig, AxiosInstance } from "axios";
 import { useAuthStore } from "../store/auth.store";
 
-const baseURL = import.meta.env.VITE_API_URL;
+const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export const api = axios.create({
   baseURL,
@@ -46,6 +46,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Optional: log for easier debugging during development
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.error("API error:", {
+        url: error?.config?.url,
+        method: error?.config?.method,
+        status: error?.response?.status,
+        data: error?.response?.data,
+      });
+    }
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
       window.location.href = "/login";

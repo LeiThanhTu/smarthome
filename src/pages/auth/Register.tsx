@@ -12,7 +12,6 @@ interface RegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  role: Role;
 }
 
 export default function Register() {
@@ -25,11 +24,7 @@ export default function Register() {
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<RegisterFormData>({
-    defaultValues: {
-      role: "ADULT",
-    },
-  });
+  } = useForm<RegisterFormData>();
 
   const password = watch("password");
 
@@ -45,7 +40,7 @@ export default function Register() {
         fullName: data.fullName,
         email: data.email,
         password: data.password,
-        role: data.role,
+        role: "GUEST", // Người dùng đăng ký luôn là GUEST
       });
       toast.success("Registration successful!");
       navigate("/login");
@@ -176,31 +171,6 @@ export default function Register() {
                   {errors.confirmPassword.message}
                 </p>
               )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Role
-              </label>
-              <div className="space-y-2">
-                {(["ADULT", "CHILD"] as const).map((role) => (
-                  <div key={role} className="flex items-center">
-                    <input
-                      id={role}
-                      type="radio"
-                      value={role}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                      {...register("role")}
-                    />
-                    <label
-                      htmlFor={role}
-                      className="ml-2 block text-sm text-gray-700"
-                    >
-                      {role.charAt(0) + role.slice(1).toLowerCase()}
-                    </label>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
 
